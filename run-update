@@ -1,0 +1,40 @@
+#!/bin/sh
+#
+# This script uses docker-image-extract to automatically update Vaultwarden. The web instace is updated using prebuilt binaries from Github
+#
+
+# configuration
+
+arch='arm64' # architecture of the binary to download
+img_ver='alpine' # the tag of the docker image from the docker hub
+bin_dir=$HOME'/vaultwarden/' # where to move the binary
+web_root='/var/www/vaultwarden.yourdomain.com/' # web root of the web instance
+do_binary_update=1 # set to 0 to disable binary updates
+do_web_update=1 # set to 0 to disable web root updates
+
+# binary update
+
+if [ $do_binary_update = 1 ]
+then
+	cd docker-image-extract
+	git pull
+	digest=$(curl -s 'https://hub.docker.com/v2/repositories/vaultwarden/server/tags/?name='$img_ver | jq -r ".results[] | select(.name == \"$img_ver\").images[] | select(.architecture == \"$arch\").digest")
+	./docker-image-extract vaultwarden/server:$digest
+	cp output/vaultwarden $bin_dir'/vaultwarden'
+	cd ..
+	rm -rf output
+else
+	echo "Skipping binary update."
+fi
+
+# web update
+
+if [ $do_web_update = 1 ]
+then
+	wget -O release.tar.gz $(curl -s "https://api.github.com/repos/dani-garcia/bw_web_builds/releases/latest" | jq -r '.assets[] | select(.name|endswith(".tar.gz")) | .browser_download_url')
+	rm -rf $web_root/*
+	tar --strip-components=1 -C $web_root/ -xf release.tar.gz
+	rm release.tar.gz
+else
+	echo "Skipping web root update."
+fi

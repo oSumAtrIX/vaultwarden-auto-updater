@@ -1,0 +1,3 @@
+[submodule "docker-image-extract"]
+	path = docker-image-extract
+	url = git@github.com:jjlin/docker-image-extract.git
